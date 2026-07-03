@@ -200,6 +200,7 @@ const BRACCI_CATALOGO = [
     minMm: 710, maxMm: 1050,
     tipo: 'Bracci doppi',
     veicoliRef: 'Micro / Sedan — Smart ForTwo, Renault Megane, BMW X5',
+    veicoliIcone: ['micro', 'sedan'],
     prodotti: { non_industriale: ['c32'], industriale: ['c32s'] },
   },
   {
@@ -209,6 +210,7 @@ const BRACCI_CATALOGO = [
     minMm: 597, maxMm: 1122,
     tipo: '2 braccia triple + 2 doppie',
     veicoliRef: 'Sedan / CUV — Smart ForTwo, Renault Megane, BMW X5, Mercedes Vito',
+    veicoliIcone: ['sedan', 'cuv'],
     prodotti: { non_industriale: ['c32_confort'], industriale: ['c32s_confort'] },
   },
   {
@@ -218,6 +220,7 @@ const BRACCI_CATALOGO = [
     minMm: 668, maxMm: 1325,
     tipo: '4 braccia triple',
     veicoliRef: 'Sedan / CUV / SUV / Van — fino a Mercedes Vito',
+    veicoliIcone: ['sedan', 'cuv', 'suv', 'van'],
     prodotti: { non_industriale: ['c4', 'c4xl'], industriale: ['c4s', 'c4s_xl'] },
   },
   {
@@ -227,6 +230,7 @@ const BRACCI_CATALOGO = [
     minMm: 705, maxMm: 1335,
     tipo: 'Doppio gioco supporti 60-100mm',
     veicoliRef: 'Sedan / CUV / SUV / Van / Mini Truck — VW Golf, BMW X5, Vito, Crafter L3',
+    veicoliIcone: ['sedan', 'cuv', 'suv', 'van', 'minitruck'],
     prodotti: { non_industriale: ['c55'], industriale: ['c55s'] },
   },
   {
@@ -236,6 +240,7 @@ const BRACCI_CATALOGO = [
     minMm: 823, maxMm: 1505, minMmAlt: 758,
     tipo: 'Bracci extra-lunghi',
     veicoliRef: 'Van / Mini Truck — Mercedes Vito, VW Crafter L3 F-Q + 4X4, Crafter EIKA L4',
+    veicoliIcone: ['van', 'minitruck'],
     prodotti: { non_industriale: ['c55wagon'], industriale: ['c55s_wagon'] },
   },
   {
@@ -245,6 +250,7 @@ const BRACCI_CATALOGO = [
     minMm: 920, maxMm: 1810, minMmAlt: 855,
     tipo: 'Bracci extra-lunghi — passo lungo',
     veicoliRef: 'Van / Mini Truck — Vito, Crafter L3 F-Q + 4X4, Crafter EIKA L4, Crafter L5 F/Q + 4X4',
+    veicoliIcone: ['van', 'minitruck'],
     prodotti: { non_industriale: ['c5wagon', 'c5xlwagon'], industriale: ['c5s_wagon'] },
   },
 ];
@@ -258,6 +264,90 @@ function selectProductsByBraccio(products, braccioId, pavimentazione) {
   return products
     .filter(p => ids.includes(p.id))
     .sort((a, b) => (a.prezzoNetto || 0) - (b.prezzoNetto || 0));
+}
+
+// ─── GRAFICA CARD BRACCI (stile catalogo PDF Cascos) ─────────────────────────
+
+// Sagome stilizzate dei tipi veicolo, come nel PDF misure Cascos.
+const VEHICLE_SILHOUETTES = {
+  micro: {
+    label: 'MICRO',
+    viewBox: '0 0 64 30',
+    path: 'M10 22 L12 13 Q14 8 22 8 L34 8 Q42 8 44 13 L46 22 Z',
+  },
+  sedan: {
+    label: 'SEDAN',
+    viewBox: '0 0 64 30',
+    path: 'M4 22 L8 16 L18 15 L23 9 Q24 8 30 8 L38 8 Q42 8 45 12 L48 15 L58 17 L60 22 Z',
+  },
+  cuv: {
+    label: 'CUV',
+    viewBox: '0 0 64 30',
+    path: 'M6 22 L8 14 L16 13 L20 7 Q21 6 28 6 L40 6 Q45 6 47 11 L49 13 L56 15 L58 22 Z',
+  },
+  suv: {
+    label: 'SUV',
+    viewBox: '0 0 64 30',
+    path: 'M6 22 L7 12 L14 11 L17 5 Q18 4 26 4 L44 4 Q50 4 52 9 L53 11 L57 13 L58 22 Z',
+  },
+  van: {
+    label: 'VAN',
+    viewBox: '0 0 64 30',
+    path: 'M5 22 L5 8 Q5 4 10 4 L46 4 Q50 4 53 9 L58 16 L59 22 Z',
+  },
+  minitruck: {
+    label: 'MINI TRUCK',
+    viewBox: '0 0 64 30',
+    path: 'M4 22 L4 7 L38 7 L38 12 L44 12 L46 6 Q47 5 52 5 L56 5 L59 12 L60 22 Z',
+  },
+};
+
+function VehicleSilhouette({ tipo }) {
+  const v = VEHICLE_SILHOUETTES[tipo];
+  if (!v) return null;
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <svg viewBox={v.viewBox} className="w-14 h-7 text-slate-300" aria-hidden="true">
+        <path d={v.path} fill="currentColor" opacity="0.85" />
+        <circle cx="17" cy="22" r="4" fill="currentColor" />
+        <circle cx="47" cy="22" r="4" fill="currentColor" />
+        <circle cx="17" cy="22" r="1.6" fill="#0f172a" />
+        <circle cx="47" cy="22" r="1.6" fill="#0f172a" />
+      </svg>
+      <span className="text-[9px] tracking-wider text-slate-500">{v.label}</span>
+    </div>
+  );
+}
+
+// Disegno stilizzato del braccio telescopico (vista laterale come nel PDF),
+// con lunghezza proporzionale alla misura massima del braccio.
+function BraccioGraphic({ minMm, maxMm }) {
+  // Lunghezza in scala: max assoluto del catalogo = 1810mm
+  const len = Math.round(110 + (maxMm / 1810) * 165); // ~176..275 px
+  const s1 = Math.round(len * 0.48); // primo tratto
+  const s2 = Math.round(len * 0.34); // estensione telescopica
+  const s3 = len - s1 - s2;          // ultima estensione + tampone
+  return (
+    <svg viewBox="0 0 300 44" className="w-full h-9 text-slate-300" aria-hidden="true" preserveAspectRatio="xMinYMid meet">
+      {/* attacco colonna */}
+      <rect x="2" y="4" width="12" height="36" rx="2" fill="currentColor" opacity="0.9" />
+      {/* perno */}
+      <circle cx="18" cy="21" r="4" fill="currentColor" />
+      {/* primo tratto braccio */}
+      <rect x="20" y="15" width={s1} height="13" rx="2" fill="currentColor" opacity="0.75" />
+      {/* estensione telescopica */}
+      <rect x={20 + s1 - 4} y="17.5" width={s2 + 4} height="9" rx="2" fill="currentColor" opacity="0.55" />
+      {/* ultima estensione */}
+      <rect x={20 + s1 + s2 - 4} y="19.5" width={s3 + 4} height="6" rx="1.5" fill="currentColor" opacity="0.4" />
+      {/* tamponi di presa (min e max) */}
+      <g fill="currentColor" opacity="0.95">
+        <rect x={20 + s1 - 8} y="8" width="12" height="5" rx="1.5" />
+        <rect x={20 + s1 - 4} y="13" width="4" height="4" />
+        <rect x={20 + len - 10} y="10" width="12" height="5" rx="1.5" />
+        <rect x={20 + len - 6} y="15" width="4" height="6" />
+      </g>
+    </svg>
+  );
 }
 
 // ─── LOGICA DI SELEZIONE ──────────────────────────────────────────────────────
@@ -526,7 +616,7 @@ const formatPrice = (n) =>
 
 const today = () => new Date().toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-const generateDocumentText = ({ mode, customer, items, note, sconto, imponibile, scontoEuro, prezzoFinale, tipoPrezzo = 'netto', costiExtra = null }) => {
+const generateDocumentText = ({ mode, customer, items, note, imponibile, scontoTotale, prezzoFinale, tipoPrezzo = 'netto', costiExtra = null }) => {
   const docType = mode === 'order' ? 'ORDINE' : 'PREVENTIVO';
   const customerName = customer.azienda || customer.nome || '—';
   const isLordo = tipoPrezzo === 'lordo';
@@ -538,7 +628,9 @@ const generateDocumentText = ({ mode, customer, items, note, sconto, imponibile,
     const tipoSollevatore = config.tipoSollevatore || '2_colonne';
     const is4Col = tipoSollevatore === '4_colonne';
     const isBracciFlow = config.flow === 'bracci';
-    const totaleRiga = product.prezzoNetto * qty;
+    const scontoRow = isLordo ? Math.max(0, Math.min(60, it.sconto || 0)) : 0;
+    const lordoRow  = product.prezzoNetto * qty;
+    const totaleRiga = lordoRow * (1 - scontoRow / 100);
 
     // Dettagli configurazione variano per 2col/4col/selezione per braccio
     let dettagliConfig = '';
@@ -576,7 +668,9 @@ Categoria: ${product.categoria}
 ${dettagliConfig}
 Quantita: ${qty}
 Prezzo unitario ${priceWord}: ${formatPrice(product.prezzoNetto)}
-Totale riga: ${formatPrice(totaleRiga)}
+` +
+      (isLordo && scontoRow > 0 ? `Sconto riga: ${scontoRow}% (-${formatPrice(lordoRow - totaleRiga)})\n` : '') +
+      `Totale riga: ${formatPrice(totaleRiga)}
 Note tecniche: ${product.noteTecniche || '—'}`;
   }).join('\n\n');
 
@@ -604,7 +698,7 @@ ${righeProdotti}
 --- RIEPILOGO ---
 Imponibile (${priceWord}): ${formatPrice(imponibile)}
 ` +
-    (isLordo && sconto > 0 ? `Sconto ${sconto}%: -${formatPrice(scontoEuro)}\n` : '') +
+    (isLordo && scontoTotale > 0 ? `Sconto totale (per singolo ponte): -${formatPrice(scontoTotale)}\n` : '') +
     righeCosti +
     `Totale: ${formatPrice(prezzoFinale)}
 IVA: esclusa
@@ -1188,25 +1282,35 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
               <button
                 key={b.id}
                 onClick={() => handleBraccio(b.id)}
-                className="w-full glass glass-hover rounded-xl p-4 text-left transition-all hover:scale-[1.005]"
+                className="w-full glass glass-hover rounded-xl p-4 text-left transition-all hover:scale-[1.005] hover:border-violet-500/40"
               >
-                <div className="flex items-start justify-between gap-3 mb-2">
+                {/* Modellini dei veicoli compatibili (come nel catalogo Cascos) */}
+                <div className="flex items-end gap-3 flex-wrap bg-slate-900/50 border border-slate-700/50 rounded-lg px-3 pt-2 pb-1.5 mb-2">
+                  {(b.veicoliIcone || []).map(v => (
+                    <VehicleSilhouette key={v} tipo={v} />
+                  ))}
+                </div>
+
+                {/* Braccio disegnato (lunghezza in scala) con misure Min/Max */}
+                <div className="mb-2">
+                  <BraccioGraphic minMm={b.minMm} maxMm={b.maxMm} />
+                  <div className="flex items-center gap-2 text-xs text-violet-300 mt-1">
+                    <Ruler size={12} className="flex-shrink-0" />
+                    <span>
+                      Min <strong>{b.minMm} mm</strong> – Max <strong>{b.maxMm} mm</strong>
+                      {b.minMmAlt && <span className="text-slate-400 ml-1">(min. assoluto {b.minMmAlt} mm)</span>}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Nome del sollevatore suggerito */}
+                <div className="flex items-center justify-between gap-3 border-t border-slate-700/50 pt-2">
                   <div>
-                    <div className="text-base font-bold text-white">{b.label}</div>
-                    <div className="text-xs text-slate-400">{b.tipo}</div>
+                    <div className="text-lg font-bold text-white">{b.label} <span className="text-sm font-semibold text-emerald-300">— {b.portata}</span></div>
+                    <div className="text-xs text-slate-500">{b.tipo} · {b.veicoliRef}</div>
                   </div>
-                  <div className="flex-shrink-0 flex flex-col items-end gap-1">
-                    <Badge text={b.portata} color="green" />
-                  </div>
+                  <ChevronRight size={18} className="text-slate-500 flex-shrink-0" />
                 </div>
-                <div className="flex items-center gap-2 text-xs text-violet-300 bg-violet-500/10 border border-violet-500/20 rounded-lg px-3 py-1.5 mb-2">
-                  <Ruler size={12} className="flex-shrink-0" />
-                  <span>
-                    Min <strong>{b.minMm} mm</strong> – Max <strong>{b.maxMm} mm</strong>
-                    {b.minMmAlt && <span className="text-slate-400 ml-1">(min. assoluto {b.minMmAlt} mm)</span>}
-                  </span>
-                </div>
-                <div className="text-xs text-slate-500">{b.veicoliRef}</div>
               </button>
             ))}
           </div>
@@ -1561,10 +1665,9 @@ function ResultsView({ mode, config, cartItems, onAddToCart, onGoToQuote, onBack
 
 // ─── QUOTE VIEW ───────────────────────────────────────────────────────────────
 
-function QuoteView({ mode, items, onUpdateQty, onRemoveItem, onAddMore, onBack, onReset, tipoPrezzo = 'netto' }) {
+function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onAddMore, onBack, onReset, tipoPrezzo = 'netto' }) {
   const [customer, setCustomer] = useState({ nome: '', azienda: '', email: '', telefono: '', indirizzo: '' });
   const [note, setNote]         = useState('');
-  const [sconto, setSconto]     = useState(0);
   const [generated, setGenerated] = useState(false);
   const [copied, setCopied]     = useState(false);
 
@@ -1576,23 +1679,28 @@ function QuoteView({ mode, items, onUpdateQty, onRemoveItem, onAddMore, onBack, 
   const isLordo = tipoPrezzo === 'lordo';
   const priceWord = isLordo ? 'lordo' : 'netto';
 
-  // Con listino a prezzo netto lo sconto NON è consentito: viene forzato a 0.
-  const scontoApplicato = isLordo ? sconto : 0;
+  // Sconto per SINGOLO ponte (riga): consentito solo con listino lordo, max 60%.
+  // Con listino netto ogni sconto è forzato a 0.
+  const scontoRiga = (it) => (isLordo ? Math.max(0, Math.min(60, it.sconto || 0)) : 0);
+  const lordoRiga  = (it) => it.product.prezzoNetto * it.qty;
+  const scontoEuroRiga  = (it) => lordoRiga(it) * (scontoRiga(it) / 100);
+  const totaleRigaScont = (it) => lordoRiga(it) - scontoEuroRiga(it);
+
   const costiExtra = isLordo
     ? { installazione: costoInstallazione || 0, trasferta: costoTrasferta || 0, trasporto: costoTrasporto || 0 }
     : { installazione: 0, trasferta: 0, trasporto: 0 };
   const costiExtraTot = costiExtra.installazione + costiExtra.trasferta + costiExtra.trasporto;
 
-  const imponibile    = items.reduce((sum, it) => sum + it.product.prezzoNetto * it.qty, 0);
-  const scontoEuro    = imponibile * (scontoApplicato / 100);
-  const prezzoFinale  = imponibile - scontoEuro + costiExtraTot;
+  const imponibile    = items.reduce((sum, it) => sum + lordoRiga(it), 0);
+  const scontoTotale  = items.reduce((sum, it) => sum + scontoEuroRiga(it), 0);
+  const prezzoFinale  = imponibile - scontoTotale + costiExtraTot;
   const totArticoli   = items.reduce((sum, it) => sum + it.qty, 0);
   const docType       = mode === 'order' ? 'ORDINE' : 'PREVENTIVO';
 
   const handleGenerate = () => setGenerated(true);
 
   const buildDocumentText = () => generateDocumentText({
-    mode, customer, items, note, sconto: scontoApplicato, imponibile, scontoEuro, prezzoFinale,
+    mode, customer, items, note, imponibile, scontoTotale, prezzoFinale,
     tipoPrezzo, costiExtra,
   });
 
@@ -1669,6 +1777,7 @@ function QuoteView({ mode, items, onUpdateQty, onRemoveItem, onAddMore, onBack, 
                   <th className="pb-2">Descrizione</th>
                   <th className="pb-2 text-right">Q.ta</th>
                   <th className="pb-2 text-right">{isLordo ? 'P.Lordo' : 'P.Netto'}</th>
+                  {isLordo && <th className="pb-2 text-right">Sconto</th>}
                   <th className="pb-2 text-right">Totale</th>
                 </tr>
               </thead>
@@ -1682,7 +1791,9 @@ function QuoteView({ mode, items, onUpdateQty, onRemoveItem, onAddMore, onBack, 
                   const bracciInfo = is4ColRow ? null : getBracciInfo(product);
                   const floorLabelRow = is4ColRow ? null : FLOOR_TYPES.find(f => f.id === config.pavimentazione)?.label;
                   const impiegoLabelRow = is4ColRow ? IMPIEGO_TYPES_4COL.find(t => t.id === config.impiego)?.label : null;
-                  const totaleRiga = product.prezzoNetto * qty;
+                  const scontoRow = isLordo ? Math.max(0, Math.min(60, it.sconto || 0)) : 0;
+                  const lordoRow  = product.prezzoNetto * qty;
+                  const totaleRiga = lordoRow * (1 - scontoRow / 100);
                   return (
                     <tr key={it.id} className="align-top border-t border-slate-700/50 print:border-gray-200 first:border-0">
                       <td className="py-2 text-blue-400 print:text-blue-700 font-mono font-semibold">{product.codice}</td>
@@ -1705,6 +1816,11 @@ function QuoteView({ mode, items, onUpdateQty, onRemoveItem, onAddMore, onBack, 
                       </td>
                       <td className="py-2 text-white print:text-black text-right">{qty}</td>
                       <td className="py-2 text-white print:text-black text-right font-mono">{formatPrice(product.prezzoNetto)}</td>
+                      {isLordo && (
+                        <td className="py-2 text-right font-mono text-amber-400 print:text-amber-700">
+                          {scontoRow > 0 ? `${scontoRow}%` : '—'}
+                        </td>
+                      )}
                       <td className="py-2 text-white print:text-black text-right font-mono font-bold">{formatPrice(totaleRiga)}</td>
                     </tr>
                   );
@@ -1719,10 +1835,10 @@ function QuoteView({ mode, items, onUpdateQty, onRemoveItem, onAddMore, onBack, 
                 <span>Imponibile {isLordo ? 'lordo' : ''} ({totArticoli} art.)</span>
                 <span className="font-mono">{formatPrice(imponibile)}</span>
               </div>
-              {isLordo && scontoApplicato > 0 && (
+              {isLordo && scontoTotale > 0 && (
                 <div className="flex gap-6 text-amber-400 print:text-amber-700">
-                  <span>Sconto {scontoApplicato}%</span>
-                  <span className="font-mono">-{formatPrice(scontoEuro)}</span>
+                  <span>Sconto totale</span>
+                  <span className="font-mono">-{formatPrice(scontoTotale)}</span>
                 </div>
               )}
               {isLordo && costiExtra.installazione > 0 && (
@@ -1916,9 +2032,34 @@ function QuoteView({ mode, items, onUpdateQty, onRemoveItem, onAddMore, onBack, 
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-slate-500">{formatPrice(product.prezzoNetto)} x {qty}</div>
-                    <div className="text-sm font-bold text-blue-400 font-mono">{formatPrice(totaleRiga)}</div>
+                    <div className="text-sm font-bold text-blue-400 font-mono">{formatPrice(totaleRigaScont(it))}</div>
                   </div>
                 </div>
+
+                {/* NUOVO — sconto per singolo ponte (solo listino lordo, max 60%) */}
+                {isLordo && (
+                  <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-700/50">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-amber-300 font-medium">Sconto %</label>
+                      <input
+                        className="w-16 text-center glass rounded-lg py-1 text-sm text-white border border-slate-700 focus:outline-none focus:border-amber-500"
+                        type="number"
+                        min="0"
+                        max="60"
+                        placeholder="0"
+                        value={it.sconto || ''}
+                        onChange={e => onUpdateSconto(it.id, parseFloat(e.target.value) || 0)}
+                      />
+                      <span className="text-xs text-slate-500">max 60%</span>
+                    </div>
+                    {scontoRiga(it) > 0 && (
+                      <div className="text-right text-xs">
+                        <span className="text-slate-500 line-through mr-2">{formatPrice(lordoRiga(it))}</span>
+                        <span className="text-amber-300">-{formatPrice(scontoEuroRiga(it))} ({scontoRiga(it)}%)</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1956,18 +2097,13 @@ function QuoteView({ mode, items, onUpdateQty, onRemoveItem, onAddMore, onBack, 
 
         {isLordo ? (
           <>
-            <div>
-              <label className="text-xs text-slate-400 mb-1 block">Sconto globale % (opzionale)</label>
-              <input
-                className={inputCls}
-                type="number"
-                min="0"
-                max="50"
-                placeholder="0"
-                value={sconto || ''}
-                onChange={e => setSconto(Math.min(50, Math.max(0, parseFloat(e.target.value) || 0)))}
-              />
-              <p className="text-xs text-slate-500 mt-1">Si applica al totale di tutti gli articoli (prezzo lordo)</p>
+            <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+              <AlertCircle size={14} className="text-amber-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-slate-400">
+                Listino a <strong className="text-amber-300">prezzo lordo</strong>:
+                lo sconto si gestisce <strong className="text-white">per singolo ponte</strong> direttamente
+                sulla riga di ciascun articolo qui sopra. Sconto massimo consentito: <strong className="text-white">60%</strong>.
+              </p>
             </div>
 
             {/* NUOVO — costi opzionali (solo listino lordo) */}
@@ -2029,10 +2165,10 @@ function QuoteView({ mode, items, onUpdateQty, onRemoveItem, onAddMore, onBack, 
           <span>{totArticoli} articol{totArticoli === 1 ? 'o' : 'i'} · imponibile ({priceWord})</span>
           <span>{formatPrice(imponibile)}</span>
         </div>
-        {isLordo && scontoApplicato > 0 && (
+        {isLordo && scontoTotale > 0 && (
           <div className="flex justify-between items-center text-sm text-amber-400 mb-1">
-            <span>Sconto {scontoApplicato}%</span>
-            <span>-{formatPrice(scontoEuro)}</span>
+            <span>Sconto totale (per singolo ponte)</span>
+            <span>-{formatPrice(scontoTotale)}</span>
           </div>
         )}
         {isLordo && costiExtra.installazione > 0 && (
@@ -2147,6 +2283,7 @@ export default function App() {
         product,
         config,
         qty: 1,
+        sconto: 0, // sconto % per singolo ponte (solo listino lordo, max 60%)
       }];
     });
   };
@@ -2154,6 +2291,14 @@ export default function App() {
   const handleUpdateQty = (itemId, newQty) => {
     setCartItems(items => items.map(it =>
       it.id === itemId ? { ...it, qty: Math.max(1, Math.min(99, newQty)) } : it
+    ));
+  };
+
+  // NUOVO — sconto per singola riga/ponte: consentito solo con listino lordo,
+  // limite massimo 60% (oltre è vietato).
+  const handleUpdateSconto = (itemId, newSconto) => {
+    setCartItems(items => items.map(it =>
+      it.id === itemId ? { ...it, sconto: Math.max(0, Math.min(60, newSconto || 0)) } : it
     ));
   };
 
@@ -2280,6 +2425,7 @@ export default function App() {
             mode={mode}
             items={cartItems}
             onUpdateQty={handleUpdateQty}
+            onUpdateSconto={handleUpdateSconto}
             onRemoveItem={handleRemoveItem}
             onAddMore={handleAddMore}
             onBack={() => config ? setView('results') : setView('configurator')}
