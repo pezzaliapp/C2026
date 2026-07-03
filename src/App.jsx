@@ -1114,24 +1114,37 @@ function DashboardView({ onStart, onStartBracci, onImport, importStatus, listino
 
 // ─── CONFIGURATOR VIEW (4 step) ───────────────────────────────────────────────
 
-function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null }) {
+function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null, resumeConfig = null }) {
+  // Se si torna indietro dai risultati, il configuratore riprende dall'ultimo
+  // step visto con le scelte precedenti già impostate (resumeConfig), senza
+  // dover ripartire dall'inizio.
+  const rc = resumeConfig;
+  const rcTipo = rc ? (rc.flow === 'bracci' ? 'bracci' : (rc.tipoSollevatore || null)) : null;
+
   // Tipo di sollevatore scelto: null = ancora da scegliere, poi '2_colonne', '4_colonne'
   // oppure 'bracci' (nuovo percorso: selezione del ponte in funzione del veicolo).
-  const [tipoSollevatore, setTipoSollevatore] = useState(initialFlow === 'bracci' ? 'bracci' : null);
+  const [tipoSollevatore, setTipoSollevatore] = useState(
+    rcTipo ?? (initialFlow === 'bracci' ? 'bracci' : null)
+  );
 
   // State condiviso / 2 colonne
-  const [step, setStep]               = useState(0);
-  const [pavimentazione, setPav]      = useState(null);
-  const [veicolo, setVeicolo]         = useState(null);
-  const [distanzaMm, setDistanza]     = useState(null);
-  const [sliderVal, setSliderVal]     = useState(950);
+  const [step, setStep] = useState(() => {
+    if (!rc) return 0;
+    if (rc.flow === 'bracci') return 1;                    // step pavimentazione
+    if (rc.tipoSollevatore === '4_colonne') return 1;      // step veicolo
+    return 2;                                              // step distanza (2 colonne)
+  });
+  const [pavimentazione, setPav]      = useState(rc?.pavimentazione ?? null);
+  const [veicolo, setVeicolo]         = useState(rc?.veicolo ?? null);
+  const [distanzaMm, setDistanza]     = useState(rc?.distanzaMm ?? null);
+  const [sliderVal, setSliderVal]     = useState(rc?.distanzaMm || 950);
   const [useSlider, setUseSlider]     = useState(false);
 
   // State specifico 4 colonne
-  const [impiego, setImpiego]         = useState(null);
+  const [impiego, setImpiego]         = useState(rc?.impiego ?? null);
 
   // State specifico percorso bracci (selezione in funzione del veicolo)
-  const [braccio, setBraccio]         = useState(null);
+  const [braccio, setBraccio]         = useState(rc?.braccio ?? null);
 
   // ─── Handlers 2 colonne ───────────────────────────────────────────────────
   const handleFloor   = (id) => { setPav(id); setStep(1); };
@@ -1665,7 +1678,7 @@ function ResultsView({ mode, config, cartItems, onAddToCart, onGoToQuote, onBack
 
 // ─── QUOTE VIEW ───────────────────────────────────────────────────────────────
 
-function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onAddMore, onBack, onReset, tipoPrezzo = 'netto' }) {
+function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onAddMore, onAddMoreBracci, onBack, onReset, tipoPrezzo = 'netto' }) {
   const [customer, setCustomer] = useState({ nome: '', azienda: '', email: '', telefono: '', indirizzo: '' });
   const [note, setNote]         = useState('');
   const [generated, setGenerated] = useState(false);
@@ -2071,6 +2084,14 @@ function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onA
         >
           <Plus size={16} /> Aggiungi un altro prodotto
         </button>
+
+        {/* NUOVO — scorciatoia per ripartire dal percorso guidato dai bracci */}
+        <button
+          onClick={onAddMoreBracci}
+          className="w-full glass glass-hover rounded-xl py-3 flex items-center justify-center gap-2 text-sm text-violet-400 hover:text-violet-300 font-medium transition-colors border border-dashed border-violet-500/30"
+        >
+          <Ruler size={16} /> Nuovo ponte in funzione del veicolo
+        </button>
       </div>
 
       {/* DATI CLIENTE */}
@@ -2315,9 +2336,19 @@ export default function App() {
 
   const handleGoToQuote = () => setView('quote');
 
-  // Torna al configuratore per aggiungere un altro prodotto (config pulita)
+  // Torna al configuratore per aggiungere un altro prodotto (config pulita,
+  // scelta tipo completa: 2 colonne / 4 colonne / selezione per veicolo)
   const handleAddMore = () => {
     setConfig(null);
+    setConfigFlow(null);
+    setView('configurator');
+  };
+
+  // NUOVO — dal preventivo: riparte subito dal percorso
+  // "Seleziona il ponte in funzione del veicolo" (carrello conservato)
+  const handleAddMoreBracci = () => {
+    setConfig(null);
+    setConfigFlow('bracci');
     setView('configurator');
   };
 
@@ -2404,6 +2435,7 @@ export default function App() {
             mode={mode}
             products={products}
             initialFlow={configFlow}
+            resumeConfig={config}
             onResult={handleConfigResult}
             onBack={() => cartItems.length > 0 ? setView('quote') : setView('dashboard')}
           />
@@ -2428,6 +2460,7 @@ export default function App() {
             onUpdateSconto={handleUpdateSconto}
             onRemoveItem={handleRemoveItem}
             onAddMore={handleAddMore}
+            onAddMoreBracci={handleAddMoreBracci}
             onBack={() => config ? setView('results') : setView('configurator')}
             onReset={handleReset}
             tipoPrezzo={tipoPrezzo}
