@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'pwa-192x192.png', 'pwa-512x512.png'],
+      includeAssets: ['favicon.svg', 'favicon-16x16.png', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-1024-1024.png'],
       manifest: {
         name: 'QuoteFlow Cascos C2026 – 2 e 4 Colonne',
         short_name: 'QuoteFlow C2026',
@@ -20,7 +20,8 @@ export default defineConfig({
         scope: './',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+          { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: 'pwa-1024-1024.png', sizes: '1024x1024', type: 'image/png', purpose: 'any' }
         ]
       },
       workbox: {
