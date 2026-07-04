@@ -209,8 +209,8 @@ const BRACCI_CATALOGO = [
     portata: '3,2 ton',
     minMm: 597, maxMm: 1122,
     tipo: '2 braccia triple + 2 doppie',
-    veicoliRef: 'Sedan / CUV — Smart ForTwo, Renault Megane, BMW X5, Mercedes Vito',
-    veicoliIcone: ['sedan', 'cuv'],
+    veicoliRef: 'RV / Sedan / CUV — Smart ForTwo, Renault Megane, BMW X5, Mercedes Vito',
+    veicoliIcone: ['rv', 'sedan', 'cuv'],
     prodotti: { non_industriale: ['c32_confort'], industriale: ['c32s_confort'] },
   },
   {
@@ -239,8 +239,8 @@ const BRACCI_CATALOGO = [
     portata: '5,5 ton',
     minMm: 823, maxMm: 1505, minMmAlt: 758,
     tipo: 'Bracci extra-lunghi',
-    veicoliRef: 'Van / Mini Truck — Mercedes Vito, VW Crafter L3 F-Q + 4X4, Crafter EIKA L4',
-    veicoliIcone: ['van', 'minitruck'],
+    veicoliRef: 'Van / Mini Truck / Truck — Mercedes Vito, VW Crafter L3 F-Q + 4X4, Crafter EIKA L4',
+    veicoliIcone: ['van', 'minitruck', 'truck'],
     prodotti: { non_industriale: ['c55wagon'], industriale: ['c55s_wagon'] },
   },
   {
@@ -249,8 +249,8 @@ const BRACCI_CATALOGO = [
     portata: '5 ton',
     minMm: 920, maxMm: 1810, minMmAlt: 855,
     tipo: 'Bracci extra-lunghi — passo lungo',
-    veicoliRef: 'Van / Mini Truck — Vito, Crafter L3 F-Q + 4X4, Crafter EIKA L4, Crafter L5 F/Q + 4X4',
-    veicoliIcone: ['van', 'minitruck'],
+    veicoliRef: 'Van / Mini Truck / Truck — Vito, Crafter L3 F-Q + 4X4, Crafter EIKA L4, Crafter L5 F/Q + 4X4',
+    veicoliIcone: ['van', 'minitruck', 'truck', 'truckxl'],
     prodotti: { non_industriale: ['c5wagon', 'c5xlwagon'], industriale: ['c5s_wagon'] },
   },
 ];
@@ -272,33 +272,57 @@ function selectProductsByBraccio(products, braccioId, pavimentazione) {
 const VEHICLE_SILHOUETTES = {
   micro: {
     label: 'MICRO',
-    viewBox: '0 0 64 30',
+    viewBox: '0 0 64 30', cls: 'w-14 h-7',
     path: 'M10 22 L12 13 Q14 8 22 8 L34 8 Q42 8 44 13 L46 22 Z',
+    wheels: [[17, 22], [47, 22]],
   },
   sedan: {
     label: 'SEDAN',
-    viewBox: '0 0 64 30',
+    viewBox: '0 0 64 30', cls: 'w-14 h-7',
     path: 'M4 22 L8 16 L18 15 L23 9 Q24 8 30 8 L38 8 Q42 8 45 12 L48 15 L58 17 L60 22 Z',
+    wheels: [[17, 22], [47, 22]],
   },
   cuv: {
     label: 'CUV',
-    viewBox: '0 0 64 30',
+    viewBox: '0 0 64 30', cls: 'w-14 h-7',
     path: 'M6 22 L8 14 L16 13 L20 7 Q21 6 28 6 L40 6 Q45 6 47 11 L49 13 L56 15 L58 22 Z',
+    wheels: [[17, 22], [47, 22]],
   },
   suv: {
     label: 'SUV',
-    viewBox: '0 0 64 30',
+    viewBox: '0 0 64 30', cls: 'w-14 h-7',
     path: 'M6 22 L7 12 L14 11 L17 5 Q18 4 26 4 L44 4 Q50 4 52 9 L53 11 L57 13 L58 22 Z',
+    wheels: [[17, 22], [47, 22]],
+  },
+  rv: {
+    label: 'RV',
+    viewBox: '0 0 64 30', cls: 'w-14 h-7',
+    path: 'M7 22 L7 8 Q7 3 13 3 L36 3 Q42 3 45 8 L51 15 L52 22 Z',
+    wheels: [[16, 22], [43, 22]],
   },
   van: {
     label: 'VAN',
-    viewBox: '0 0 64 30',
+    viewBox: '0 0 64 30', cls: 'w-14 h-7',
     path: 'M5 22 L5 8 Q5 4 10 4 L46 4 Q50 4 53 9 L58 16 L59 22 Z',
+    wheels: [[17, 22], [47, 22]],
   },
   minitruck: {
     label: 'MINI TRUCK',
-    viewBox: '0 0 64 30',
+    viewBox: '0 0 64 30', cls: 'w-14 h-7',
     path: 'M4 22 L4 7 L38 7 L38 12 L44 12 L46 6 Q47 5 52 5 L56 5 L59 12 L60 22 Z',
+    wheels: [[15, 22], [50, 22]],
+  },
+  truck: {
+    label: 'TRUCK',
+    viewBox: '0 0 96 30', cls: 'w-[84px] h-7',
+    path: 'M4 22 L4 6 L64 6 L64 12 L70 12 L72 5 Q73 4 80 4 L86 4 L90 12 L92 22 Z',
+    wheels: [[15, 22], [42, 22], [80, 22]],
+  },
+  truckxl: {
+    label: 'TRUCK XL',
+    viewBox: '0 0 112 30', cls: 'w-[98px] h-7',
+    path: 'M4 22 L4 6 L80 6 L80 12 L86 12 L88 5 Q89 4 96 4 L102 4 L106 12 L108 22 Z',
+    wheels: [[15, 22], [38, 22], [61, 22], [96, 22]],
   },
 };
 
@@ -307,12 +331,14 @@ function VehicleSilhouette({ tipo }) {
   if (!v) return null;
   return (
     <div className="flex flex-col items-center gap-0.5">
-      <svg viewBox={v.viewBox} className="w-14 h-7 text-slate-300" aria-hidden="true">
+      <svg viewBox={v.viewBox} className={`${v.cls} text-slate-300`} aria-hidden="true">
         <path d={v.path} fill="currentColor" opacity="0.85" />
-        <circle cx="17" cy="22" r="4" fill="currentColor" />
-        <circle cx="47" cy="22" r="4" fill="currentColor" />
-        <circle cx="17" cy="22" r="1.6" fill="#0f172a" />
-        <circle cx="47" cy="22" r="1.6" fill="#0f172a" />
+        {v.wheels.map(([cx, cy], i) => (
+          <g key={i}>
+            <circle cx={cx} cy={cy} r="4" fill="currentColor" />
+            <circle cx={cx} cy={cy} r="1.6" fill="#0f172a" />
+          </g>
+        ))}
       </svg>
       <span className="text-[9px] tracking-wider text-slate-500">{v.label}</span>
     </div>
