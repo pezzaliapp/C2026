@@ -266,6 +266,65 @@ function selectProductsByBraccio(products, braccioId, pavimentazione) {
     .sort((a, b) => (a.prezzoNetto || 0) - (b.prezzoNetto || 0));
 }
 
+// ─── PIATTAFORME 4 COLONNE (PDF catalogo "Elevadores 4 columnas" Cascos) ─────
+//
+// Misure piattaforme per serie (lunghezza x larghezza in mm) e tipo:
+// 'liscia' = pasarela lisa / pedana piana; 'allineamento' = gama alineación/assetto.
+// Nuovo percorso: l'utente imposta lunghezza, larghezza e tipo richiesti e
+// l'app trova i 4 colonne che soddisfano le misure — o i più vicini.
+
+const PIATTAFORME_4COL = {
+  c440:       { lunghezza: 4335, larghezza: 500, tipo: 'liscia',       serie: 'S' },
+  c442:       { lunghezza: 4335, larghezza: 500, tipo: 'allineamento', serie: 'S' },
+  c443:       { lunghezza: 4800, larghezza: 630, tipo: 'liscia',       serie: 'M' },
+  c443h:      { lunghezza: 4800, larghezza: 630, tipo: 'liscia',       serie: 'M' },
+  c445:       { lunghezza: 4800, larghezza: 630, tipo: 'allineamento', serie: 'M' },
+  c445h:      { lunghezza: 4800, larghezza: 630, tipo: 'allineamento', serie: 'M' },
+  c450_toro:  { lunghezza: 4700, larghezza: 615, tipo: 'liscia',       serie: 'L' },
+  c450h:      { lunghezza: 5200, larghezza: 630, tipo: 'liscia',       serie: 'L' },
+  c450plus:   { lunghezza: 5200, larghezza: 630, tipo: 'liscia',       serie: 'L' },
+  c455h:      { lunghezza: 5200, larghezza: 630, tipo: 'allineamento', serie: 'L' },
+  c455plus:   { lunghezza: 5200, larghezza: 630, tipo: 'allineamento', serie: 'L' },
+  c450xl:     { lunghezza: 5700, larghezza: 530, tipo: 'liscia',       serie: 'XL' },
+  c455xl:     { lunghezza: 5700, larghezza: 530, tipo: 'allineamento', serie: 'XL' },
+  c470:       { lunghezza: 6240, larghezza: 580, tipo: 'liscia',       serie: 'Industrial' },
+  c472:       { lunghezza: 6240, larghezza: 580, tipo: 'allineamento', serie: 'Industrial' },
+  c4100:      { lunghezza: 7000, larghezza: 700, tipo: 'liscia',       serie: 'Industrial' },
+};
+
+// Cerca i 4 colonne che soddisfano le misure richieste (piattaforma con
+// lunghezza E larghezza >= richieste). Se nessuno soddisfa, restituisce i
+// prodotti che si avvicinano maggiormente, con flag approssimati = true.
+function selectProducts4ColByMisure(products, lunghezzaMm, larghezzaMm, tipoPiattaforma) {
+  const candidati = products
+    .filter(p => p.tipo_sollevatore === '4_colonne' && PIATTAFORME_4COL[p.id])
+    .filter(p => tipoPiattaforma === 'entrambe' || PIATTAFORME_4COL[p.id].tipo === tipoPiattaforma)
+    .map(p => {
+      const dim = PIATTAFORME_4COL[p.id];
+      const esatto = dim.lunghezza >= lunghezzaMm && dim.larghezza >= larghezzaMm;
+      // Distanza dalle misure richieste (per ordinare dal più adatto/vicino)
+      const delta = Math.abs(dim.lunghezza - lunghezzaMm) + Math.abs(dim.larghezza - larghezzaMm);
+      return { ...p, _piattaforma: { ...dim, esatto, delta } };
+    });
+
+  const esatti = candidati
+    .filter(p => p._piattaforma.esatto)
+    .sort((a, b) =>
+      a._piattaforma.delta - b._piattaforma.delta ||
+      (a.prezzoNetto || 0) - (b.prezzoNetto || 0)
+    );
+  if (esatti.length > 0) return { results: esatti, approssimati: false };
+
+  // Nessuna corrispondenza esatta: proponiamo i più vicini alle misure richieste
+  const vicini = candidati
+    .sort((a, b) =>
+      a._piattaforma.delta - b._piattaforma.delta ||
+      (a.prezzoNetto || 0) - (b.prezzoNetto || 0)
+    )
+    .slice(0, 4);
+  return { results: vicini, approssimati: true };
+}
+
 // ─── GRAFICA CARD BRACCI (stile catalogo PDF Cascos) ─────────────────────────
 
 // Sagome stilizzate dei tipi veicolo, come nel PDF misure Cascos.
@@ -660,7 +719,14 @@ const generateDocumentText = ({ mode, customer, items, note, imponibile, scontoT
 
     // Dettagli configurazione variano per 2col/4col/selezione per braccio
     let dettagliConfig = '';
-    if (is4Col) {
+    if (is4Col && config.flow === 'misure4col') {
+      const dim = PIATTAFORME_4COL[product.id];
+      dettagliConfig = `Tipo sollevatore: 4 Colonne
+Selezione: In funzione delle misure piattaforma
+Misure richieste: ${config.lunghezzaMm} x ${config.larghezzaMm} mm
+Pedane modello: ${dim ? `${dim.lunghezza} x ${dim.larghezza} mm (Serie ${dim.serie}, ${dim.tipo === 'liscia' ? 'liscia' : 'allineamento'})` : '—'}
+Pavimentazione: Universale (4 colonne)`;
+    } else if (is4Col) {
       const impiegoLabel = IMPIEGO_TYPES_4COL.find(t => t.id === config.impiego)?.label || '—';
       dettagliConfig = `Tipo sollevatore: 4 Colonne
 Impiego: ${impiegoLabel}
@@ -906,6 +972,25 @@ function ProductCard({ product, isRecommended, onSelect, mode, alreadyInCart, ti
         {hasPdf && <Badge text="Scheda PDF" color="slate" />}
       </div>
 
+      {/* Misure piattaforma (percorso selezione per misure) */}
+      {product._piattaforma && (
+        <div className={`flex items-center justify-between gap-2 text-xs rounded-lg px-3 py-1.5 mb-3 border ${
+          product._piattaforma.esatto
+            ? 'text-teal-300 bg-teal-500/10 border-teal-500/20'
+            : 'text-amber-300 bg-amber-500/10 border-amber-500/20'
+        }`}>
+          <span className="flex items-center gap-2">
+            <Ruler size={12} className="flex-shrink-0" />
+            Pedane <strong>{product._piattaforma.lunghezza} x {product._piattaforma.larghezza} mm</strong>
+            · Serie {product._piattaforma.serie}
+            · {product._piattaforma.tipo === 'liscia' ? 'Liscia' : 'Allineamento'}
+          </span>
+          <span className="font-semibold flex-shrink-0">
+            {product._piattaforma.esatto ? '✓ Misure OK' : '≈ Più vicino'}
+          </span>
+        </div>
+      )}
+
       {bracciInfo && (
         <div className="flex items-center gap-2 text-xs text-violet-300 bg-violet-500/10 border border-violet-500/20 rounded-lg px-3 py-2 mb-3">
           <Ruler size={13} className="flex-shrink-0" />
@@ -953,7 +1038,7 @@ function ProductCard({ product, isRecommended, onSelect, mode, alreadyInCart, ti
 
 // ─── VIEWS ────────────────────────────────────────────────────────────────────
 
-function DashboardView({ onStart, onStartBracci, onImport, importStatus, listinoInfo, onResetPrices }) {
+function DashboardView({ onStart, onStartBracci, onStartMisure4Col, onImport, importStatus, listinoInfo, onResetPrices }) {
   // Tipo di prezzo da importare dal listino: 'netto' (default, come app originale) o 'lordo'
   const [tipoPrezzoImport, setTipoPrezzoImport] = useState('netto');
 
@@ -1002,6 +1087,22 @@ function DashboardView({ onStart, onStartBracci, onImport, importStatus, listino
                 <div className="text-xs text-slate-400">
                   Parti dai bracci del catalogo Cascos: scegli il braccio adatto al veicolo,
                   poi la pavimentazione (industriale o non industriale).
+                </div>
+              </div>
+            </div>
+          </button>
+          {/* NUOVO — Percorso guidato dalle misure piattaforma (4 colonne) */}
+          <button
+            onClick={() => onStartMisure4Col('quote')}
+            className="w-full glass glass-hover rounded-xl p-5 text-left hover:scale-[1.01] transition-all border border-teal-500/30 bg-teal-500/5"
+          >
+            <div className="flex items-center gap-4">
+              <Ruler size={24} className="text-teal-400 flex-shrink-0" />
+              <div>
+                <div className="font-bold text-white mb-1">Seleziona il 4 colonne in funzione delle misure</div>
+                <div className="text-xs text-slate-400">
+                  Imposta lunghezza, larghezza e tipo di piattaforma: l'app trova il ponte
+                  adatto o propone i modelli più vicini alle misure richieste.
                 </div>
               </div>
             </div>
@@ -1145,18 +1246,22 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
   // step visto con le scelte precedenti già impostate (resumeConfig), senza
   // dover ripartire dall'inizio.
   const rc = resumeConfig;
-  const rcTipo = rc ? (rc.flow === 'bracci' ? 'bracci' : (rc.tipoSollevatore || null)) : null;
+  const rcTipo = rc
+    ? (rc.flow === 'bracci' ? 'bracci' : rc.flow === 'misure4col' ? 'misure4col' : (rc.tipoSollevatore || null))
+    : null;
 
-  // Tipo di sollevatore scelto: null = ancora da scegliere, poi '2_colonne', '4_colonne'
-  // oppure 'bracci' (nuovo percorso: selezione del ponte in funzione del veicolo).
+  // Tipo di sollevatore scelto: null = ancora da scegliere, poi '2_colonne', '4_colonne',
+  // 'bracci' (selezione 2 colonne in funzione del veicolo) oppure
+  // 'misure4col' (selezione 4 colonne in funzione delle misure piattaforma).
   const [tipoSollevatore, setTipoSollevatore] = useState(
-    rcTipo ?? (initialFlow === 'bracci' ? 'bracci' : null)
+    rcTipo ?? (initialFlow === 'bracci' ? 'bracci' : initialFlow === 'misure4col' ? 'misure4col' : null)
   );
 
   // State condiviso / 2 colonne
   const [step, setStep] = useState(() => {
     if (!rc) return 0;
     if (rc.flow === 'bracci') return 1;                    // step pavimentazione
+    if (rc.flow === 'misure4col') return 0;                // form misure
     if (rc.tipoSollevatore === '4_colonne') return 1;      // step veicolo
     return 2;                                              // step distanza (2 colonne)
   });
@@ -1171,6 +1276,11 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
 
   // State specifico percorso bracci (selezione in funzione del veicolo)
   const [braccio, setBraccio]         = useState(rc?.braccio ?? null);
+
+  // State specifico percorso misure 4 colonne
+  const [lunghezzaMm, setLunghezzaMm]         = useState(rc?.lunghezzaMm ?? '');
+  const [larghezzaMm, setLarghezzaMm]         = useState(rc?.larghezzaMm ?? '');
+  const [tipoPiattaforma, setTipoPiattaforma] = useState(rc?.tipoPiattaforma ?? 'entrambe');
 
   // ─── Handlers 2 colonne ───────────────────────────────────────────────────
   const handleFloor   = (id) => { setPav(id); setStep(1); };
@@ -1214,6 +1324,28 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
     });
   };
 
+  // ─── Handler percorso misure 4 colonne ────────────────────────────────────
+  // L'utente imposta lunghezza, larghezza e tipo di piattaforma richiesti:
+  // l'app trova i 4 colonne che soddisfano le misure oppure, se non esistono,
+  // propone i prodotti che si avvicinano maggiormente.
+  const misureValide = Number(lunghezzaMm) >= 3000 && Number(lunghezzaMm) <= 8000 &&
+                       Number(larghezzaMm) >= 300 && Number(larghezzaMm) <= 1000;
+  const handleMisure4Col = () => {
+    if (!misureValide) return;
+    const { results, approssimati } = selectProducts4ColByMisure(
+      products, Number(lunghezzaMm), Number(larghezzaMm), tipoPiattaforma
+    );
+    onResult({
+      tipoSollevatore: '4_colonne',
+      flow: 'misure4col',
+      lunghezzaMm: Number(lunghezzaMm),
+      larghezzaMm: Number(larghezzaMm),
+      tipoPiattaforma,
+      approssimati,
+      results,
+    });
+  };
+
   // ─── Reset e back ─────────────────────────────────────────────────────────
   const handleBackInternal = () => {
     if (tipoSollevatore === null) {
@@ -1237,7 +1369,9 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
   // 2 colonne: 4 step visivi (tipo, pav, veicolo, distanza)
   // 4 colonne: 3 step visivi (tipo, impiego, veicolo)
   // bracci:    3 step visivi (tipo, braccio, pavimentazione)
-  const totalSteps = (tipoSollevatore === '4_colonne' || tipoSollevatore === 'bracci') ? 3 : 4;
+  const totalSteps = tipoSollevatore === 'misure4col'
+    ? 2
+    : (tipoSollevatore === '4_colonne' || tipoSollevatore === 'bracci') ? 3 : 4;
   const currentStepVisual = tipoSollevatore === null ? 0 : step + 1;
 
   return (
@@ -1256,7 +1390,8 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
               <span className="ml-2 text-blue-400">
                 · {tipoSollevatore === '2_colonne' ? '2 Colonne'
                   : tipoSollevatore === '4_colonne' ? '4 Colonne'
-                  : 'Selezione per Veicolo'}
+                  : tipoSollevatore === 'bracci' ? 'Selezione per Veicolo'
+                  : 'Selezione per Misure'}
               </span>
             )}
           </div>
@@ -1297,6 +1432,21 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
                 <div className="text-lg font-bold text-white mb-1">Seleziona il ponte in funzione del veicolo</div>
                 <div className="text-sm text-slate-400">
                   Scegli il braccio adatto dal catalogo misure Cascos, poi la pavimentazione.
+                </div>
+              </div>
+              <ChevronRight size={18} className="text-slate-500 flex-shrink-0" />
+            </button>
+            {/* NUOVO — percorso guidato dalle misure piattaforma 4 colonne */}
+            <button
+              onClick={() => { setTipoSollevatore('misure4col'); setStep(0); }}
+              className="w-full glass glass-hover rounded-xl p-5 text-left flex items-center gap-4 transition-all hover:scale-[1.01] border border-teal-500/30 bg-teal-500/5"
+            >
+              <span className="text-3xl w-10 text-center">📐</span>
+              <div className="flex-1">
+                <div className="text-lg font-bold text-white mb-1">Seleziona il 4 colonne in funzione delle misure</div>
+                <div className="text-sm text-slate-400">
+                  Imposta lunghezza, larghezza e tipo di piattaforma: l'app trova il ponte adatto
+                  o propone i più vicini alle misure richieste.
                 </div>
               </div>
               <ChevronRight size={18} className="text-slate-500 flex-shrink-0" />
@@ -1387,6 +1537,94 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
                 </div>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* ─── FLOW MISURE 4 COLONNE (Selezione in funzione delle misure) ───── */}
+      {tipoSollevatore === 'misure4col' && step === 0 && (
+        <div className="animate-slide-up">
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-xl font-bold text-white">Misure della Piattaforma</h2>
+            <Badge text="Catalogo 4 colonne Cascos" color="violet" />
+          </div>
+          <p className="text-sm text-slate-400 mb-5">
+            Imposta le misure minime richieste per le pedane e il tipo di piattaforma:
+            l'app trova i ponti 4 colonne che le soddisfano. Se nessun modello
+            corrisponde esattamente, ti verranno proposti i prodotti più vicini.
+          </p>
+
+          <div className="glass rounded-xl p-4 space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Lunghezza pedane (mm)</label>
+                <input
+                  className="w-full glass rounded-lg py-2.5 px-3 text-sm text-white border border-slate-700 focus:outline-none focus:border-teal-500"
+                  type="number" min="3000" max="8000" step="5" placeholder="es. 5200"
+                  value={lunghezzaMm}
+                  onChange={e => setLunghezzaMm(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">Larghezza pedana (mm)</label>
+                <input
+                  className="w-full glass rounded-lg py-2.5 px-3 text-sm text-white border border-slate-700 focus:outline-none focus:border-teal-500"
+                  type="number" min="300" max="1000" step="5" placeholder="es. 630"
+                  value={larghezzaMm}
+                  onChange={e => setLarghezzaMm(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-slate-400 mb-2">Tipo di piattaforma</div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'liscia',       label: 'Liscia',       desc: 'Pedane piane' },
+                  { id: 'allineamento', label: 'Allineamento', desc: 'Assetto ruote' },
+                  { id: 'entrambe',     label: 'Entrambe',     desc: 'Tutti i tipi' },
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTipoPiattaforma(t.id)}
+                    className={`rounded-lg py-2.5 px-2 text-center transition-colors border ${
+                      tipoPiattaforma === t.id
+                        ? 'bg-teal-600/30 border-teal-500/60 text-white'
+                        : 'glass border-slate-700 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold">{t.label}</div>
+                    <div className="text-[10px] opacity-80">{t.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleMisure4Col}
+              disabled={!misureValide}
+              className="w-full bg-teal-600 hover:bg-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl py-3 transition-colors"
+            >
+              Trova il 4 Colonne
+            </button>
+            {!misureValide && (lunghezzaMm || larghezzaMm) && (
+              <p className="text-xs text-slate-500 text-center">
+                Inserisci una lunghezza tra 3.000 e 8.000 mm e una larghezza tra 300 e 1.000 mm.
+              </p>
+            )}
+          </div>
+
+          {/* Riferimento rapido serie piattaforme dal catalogo */}
+          <div className="glass rounded-xl p-4 mt-4">
+            <div className="text-xs font-semibold text-slate-300 mb-2">Serie piattaforme Cascos (L x W)</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-slate-400">
+              <span>Serie S · 4.335 x 500</span>
+              <span>Serie M · 4.800 x 630</span>
+              <span>Serie L · 5.200 x 630</span>
+              <span>Serie XL · 5.700 x 530</span>
+              <span>Industrial · 6.240 x 580</span>
+              <span>Industrial · 7.000 x 700</span>
+            </div>
           </div>
         </div>
       )}
@@ -1605,7 +1843,11 @@ function ResultsView({ mode, config, cartItems, onAddToCart, onGoToQuote, onBack
   const { results = [], veicolo, pavimentazione, distanzaMm, impiego, tipoSollevatore } = config;
   const is4Col = tipoSollevatore === '4_colonne';
   const isBracciFlow = config.flow === 'bracci';
+  const isMisureFlow = config.flow === 'misure4col';
   const braccioInfo = isBracciFlow ? BRACCI_CATALOGO.find(b => b.id === config.braccio) : null;
+  const tipoPiattLabel = isMisureFlow
+    ? (config.tipoPiattaforma === 'liscia' ? 'Liscia' : config.tipoPiattaforma === 'allineamento' ? 'Allineamento' : 'Liscia + Allineamento')
+    : null;
   const vehicleInfo = VEHICLE_TYPES.find(v => v.id === veicolo);
   const floorLabel  = is4Col ? null : FLOOR_TYPES.find(f => f.id === pavimentazione)?.label;
   const impiegoLabel = is4Col ? IMPIEGO_TYPES_4COL.find(t => t.id === impiego)?.label : null;
@@ -1625,11 +1867,13 @@ function ResultsView({ mode, config, cartItems, onAddToCart, onGoToQuote, onBack
             {mode === 'order' ? 'Risultati Ordine' : 'Risultati Preventivo'}
           </div>
           <div className="text-white font-semibold">
-            {is4Col
-              ? <>{vehicleInfo?.icon} {vehicleInfo?.label} · {impiegoLabel} · 4 Colonne</>
-              : isBracciFlow
-                ? <>📏 Braccio {braccioInfo?.label} ({braccioInfo?.minMm}–{braccioInfo?.maxMm} mm) · {floorLabel}</>
-                : <>{vehicleInfo?.icon} {vehicleInfo?.label} · {distanzaMm} mm · {floorLabel}</>
+            {isMisureFlow
+              ? <>📐 4 Colonne · Pedane ≥ {config.lunghezzaMm} x {config.larghezzaMm} mm · {tipoPiattLabel}</>
+              : is4Col
+                ? <>{vehicleInfo?.icon} {vehicleInfo?.label} · {impiegoLabel} · 4 Colonne</>
+                : isBracciFlow
+                  ? <>📏 Braccio {braccioInfo?.label} ({braccioInfo?.minMm}–{braccioInfo?.maxMm} mm) · {floorLabel}</>
+                  : <>{vehicleInfo?.icon} {vehicleInfo?.label} · {distanzaMm} mm · {floorLabel}</>
             }
           </div>
         </div>
@@ -1665,7 +1909,9 @@ function ResultsView({ mode, config, cartItems, onAddToCart, onGoToQuote, onBack
           <AlertCircle size={32} className="text-amber-400 mx-auto" />
           <div className="text-white font-semibold">Nessun modello compatibile</div>
           <div className="text-sm text-slate-400">
-            {is4Col
+            {isMisureFlow
+              ? 'Nessun 4 colonne disponibile per il tipo di piattaforma selezionato. Prova con "Entrambe".'
+              : is4Col
               ? 'Nessun sollevatore 4 colonne Cascos copre la combinazione impiego/veicolo selezionata. Prova un altro tipo di impiego o veicolo.'
               : isBracciFlow
                 ? 'Nessun modello disponibile per la combinazione braccio/pavimentazione selezionata. Prova un altro braccio.'
@@ -1673,11 +1919,21 @@ function ResultsView({ mode, config, cartItems, onAddToCart, onGoToQuote, onBack
             }
           </div>
           <button onClick={onBack} className="glass glass-hover rounded-xl px-4 py-2 text-sm text-white transition-colors">
-            {is4Col ? 'Modifica impiego' : isBracciFlow ? 'Modifica braccio' : 'Modifica distanza'}
+            {isMisureFlow ? 'Modifica misure' : is4Col ? 'Modifica impiego' : isBracciFlow ? 'Modifica braccio' : 'Modifica distanza'}
           </button>
         </div>
       ) : (
         <div className="space-y-4">
+          {isMisureFlow && config.approssimati && (
+            <div className="glass rounded-xl p-4 border border-amber-500/30 bg-amber-500/5 flex items-start gap-3">
+              <AlertCircle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-slate-300">
+                <span className="font-semibold text-amber-300">Nessun modello soddisfa esattamente le misure richieste
+                ({config.lunghezzaMm} x {config.larghezzaMm} mm).</span>{' '}
+                Ti proponiamo i prodotti che si avvicinano maggiormente alle misure indicate.
+              </div>
+            </div>
+          )}
           {results.map((p, i) => (
             <ProductCard
               key={p.id}
@@ -1704,7 +1960,7 @@ function ResultsView({ mode, config, cartItems, onAddToCart, onGoToQuote, onBack
 
 // ─── QUOTE VIEW ───────────────────────────────────────────────────────────────
 
-function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onAddMore, onAddMoreBracci, onBack, onReset, tipoPrezzo = 'netto' }) {
+function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onAddMore, onAddMoreBracci, onAddMoreMisure4Col, onBack, onReset, tipoPrezzo = 'netto' }) {
   const [customer, setCustomer] = useState({ nome: '', azienda: '', email: '', telefono: '', indirizzo: '' });
   const [note, setNote]         = useState('');
   const [generated, setGenerated] = useState(false);
@@ -1826,6 +2082,8 @@ function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onA
                   const vehicleInfo = VEHICLE_TYPES.find(v => v.id === config.veicolo);
                   const is4ColRow = (config.tipoSollevatore || '2_colonne') === '4_colonne';
                   const isBracciRow = config.flow === 'bracci';
+                  const isMisureRow = config.flow === 'misure4col';
+                  const dimRow = isMisureRow ? PIATTAFORME_4COL[product.id] : null;
                   const braccioRow = isBracciRow ? BRACCI_CATALOGO.find(b => b.id === config.braccio) : null;
                   const bracciInfo = is4ColRow ? null : getBracciInfo(product);
                   const floorLabelRow = is4ColRow ? null : FLOOR_TYPES.find(f => f.id === config.pavimentazione)?.label;
@@ -1840,11 +2098,13 @@ function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onA
                         <div className="font-semibold">{product.modello}</div>
                         <div className="text-xs text-slate-400 print:text-gray-500">{product.portata} · {product.categoria}</div>
                         <div className="text-xs text-slate-500 print:text-gray-600">
-                          {is4ColRow
-                            ? <>4 Colonne · {vehicleInfo?.label} · {impiegoLabelRow}</>
-                            : isBracciRow
-                              ? <>{floorLabelRow} · Selezione per veicolo · Braccio {braccioRow?.label}</>
-                              : <>{floorLabelRow} · {vehicleInfo?.label} · {config.distanzaMm} mm</>
+                          {isMisureRow
+                            ? <>4 Colonne · Selezione per misure · Pedane {dimRow ? `${dimRow.lunghezza} x ${dimRow.larghezza} mm` : '—'}</>
+                            : is4ColRow
+                              ? <>4 Colonne · {vehicleInfo?.label} · {impiegoLabelRow}</>
+                              : isBracciRow
+                                ? <>{floorLabelRow} · Selezione per veicolo · Braccio {braccioRow?.label}</>
+                                : <>{floorLabelRow} · {vehicleInfo?.label} · {config.distanzaMm} mm</>
                           }
                         </div>
                         {bracciInfo && (
@@ -1994,6 +2254,8 @@ function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onA
             const vehicleInfo = VEHICLE_TYPES.find(v => v.id === config.veicolo);
             const is4ColRow = (config.tipoSollevatore || '2_colonne') === '4_colonne';
             const isBracciRow = config.flow === 'bracci';
+            const isMisureRow = config.flow === 'misure4col';
+            const dimRow = isMisureRow ? PIATTAFORME_4COL[product.id] : null;
             const braccioRow = isBracciRow ? BRACCI_CATALOGO.find(b => b.id === config.braccio) : null;
             const bracciInfo = is4ColRow ? null : getBracciInfo(product);
             const floorLabelRow = is4ColRow ? 'Pav. Universale' : FLOOR_TYPES.find(f => f.id === config.pavimentazione)?.label;
@@ -2027,13 +2289,16 @@ function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onA
                       ? <Badge text={`Braccio ${braccioRow?.label || ''}`} color="violet" />
                       : (bracciInfo && <Badge text={`${config.distanzaMm} mm`} color="violet" />)
                   }
-                  {is4ColRow && impiegoLabelRow && <Badge text={impiegoLabelRow} color="amber" />}
+                  {isMisureRow && dimRow && <Badge text={`Pedane ${dimRow.lunghezza} x ${dimRow.larghezza} mm`} color="amber" />}
+                  {is4ColRow && !isMisureRow && impiegoLabelRow && <Badge text={impiegoLabelRow} color="amber" />}
                 </div>
 
                 <div className="text-xs text-slate-500">
-                  {isBracciRow
-                    ? <>📏 Selezione in funzione del veicolo</>
-                    : <>{vehicleInfo?.icon} {vehicleInfo?.label}</>
+                  {isMisureRow
+                    ? <>📐 Selezione in funzione delle misure ({config.lunghezzaMm} x {config.larghezzaMm} mm richiesti)</>
+                    : isBracciRow
+                      ? <>📏 Selezione in funzione del veicolo</>
+                      : <>{vehicleInfo?.icon} {vehicleInfo?.label}</>
                   }
                   {bracciInfo && <span> · Bracci {bracciInfo.minMm}–{bracciInfo.maxMm} mm</span>}
                 </div>
@@ -2117,6 +2382,14 @@ function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onA
           className="w-full glass glass-hover rounded-xl py-3 flex items-center justify-center gap-2 text-sm text-violet-400 hover:text-violet-300 font-medium transition-colors border border-dashed border-violet-500/30"
         >
           <Ruler size={16} /> Nuovo ponte in funzione del veicolo
+        </button>
+
+        {/* NUOVO — scorciatoia per ripartire dal percorso misure 4 colonne */}
+        <button
+          onClick={onAddMoreMisure4Col}
+          className="w-full glass glass-hover rounded-xl py-3 flex items-center justify-center gap-2 text-sm text-teal-400 hover:text-teal-300 font-medium transition-colors border border-dashed border-teal-500/30"
+        >
+          <Ruler size={16} /> Nuovo 4 colonne in funzione delle misure
         </button>
       </div>
 
@@ -2293,6 +2566,15 @@ export default function App() {
     setView('configurator');
   };
 
+  // NUOVO — avvia il percorso "Seleziona il 4 colonne in funzione delle misure"
+  const handleStartMisure4Col = (m) => {
+    setMode(m);
+    setCartItems([]);
+    setConfig(null);
+    setConfigFlow('misure4col');
+    setView('configurator');
+  };
+
   const handleConfigResult   = (cfg) => { setConfig(cfg); setView('results'); };
 
   // Aggiunge il prodotto al carrello con la configurazione corrente.
@@ -2307,6 +2589,13 @@ export default function App() {
         const cfgTipo = config.tipoSollevatore || '2_colonne';
         if (itTipo !== cfgTipo) return false;
         if (cfgTipo === '4_colonne') {
+          // Le righe del flusso misure matchano solo tra loro (stesse misure e tipo)
+          if ((it.config.flow === 'misure4col') !== (config.flow === 'misure4col')) return false;
+          if (config.flow === 'misure4col') {
+            return it.config.lunghezzaMm === config.lunghezzaMm &&
+                   it.config.larghezzaMm === config.larghezzaMm &&
+                   it.config.tipoPiattaforma === config.tipoPiattaforma;
+          }
           return it.config.impiego === config.impiego &&
                  it.config.veicolo === config.veicolo;
         }
@@ -2375,6 +2664,13 @@ export default function App() {
   const handleAddMoreBracci = () => {
     setConfig(null);
     setConfigFlow('bracci');
+    setView('configurator');
+  };
+
+  // NUOVO — dal preventivo: riparte dal percorso misure 4 colonne (carrello conservato)
+  const handleAddMoreMisure4Col = () => {
+    setConfig(null);
+    setConfigFlow('misure4col');
     setView('configurator');
   };
 
@@ -2449,6 +2745,7 @@ export default function App() {
           <DashboardView
             onStart={handleStart}
             onStartBracci={handleStartBracci}
+            onStartMisure4Col={handleStartMisure4Col}
             onImport={handleImport}
             importStatus={importStatus}
             listinoInfo={listinoInfo}
@@ -2487,6 +2784,7 @@ export default function App() {
             onRemoveItem={handleRemoveItem}
             onAddMore={handleAddMore}
             onAddMoreBracci={handleAddMoreBracci}
+            onAddMoreMisure4Col={handleAddMoreMisure4Col}
             onBack={() => config ? setView('results') : setView('configurator')}
             onReset={handleReset}
             tipoPrezzo={tipoPrezzo}
