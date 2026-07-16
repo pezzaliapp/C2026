@@ -273,23 +273,24 @@ function selectProductsByBraccio(products, braccioId, pavimentazione) {
 // Nuovo percorso: l'utente imposta lunghezza, larghezza e tipo richiesti e
 // l'app trova i 4 colonne che soddisfano le misure — o i più vicini.
 
+// larghezzaTotale = ingombro complessivo del ponte (quota dai disegni catalogo)
 const PIATTAFORME_4COL = {
-  c440:       { lunghezza: 4335, larghezza: 500, tipo: 'liscia',       serie: 'S' },
-  c442:       { lunghezza: 4335, larghezza: 500, tipo: 'allineamento', serie: 'S' },
-  c443:       { lunghezza: 4800, larghezza: 630, tipo: 'liscia',       serie: 'M' },
-  c443h:      { lunghezza: 4800, larghezza: 630, tipo: 'liscia',       serie: 'M' },
-  c445:       { lunghezza: 4800, larghezza: 630, tipo: 'allineamento', serie: 'M' },
-  c445h:      { lunghezza: 4800, larghezza: 630, tipo: 'allineamento', serie: 'M' },
-  c450_toro:  { lunghezza: 4700, larghezza: 615, tipo: 'liscia',       serie: 'L' },
-  c450h:      { lunghezza: 5200, larghezza: 630, tipo: 'liscia',       serie: 'L' },
-  c450plus:   { lunghezza: 5200, larghezza: 630, tipo: 'liscia',       serie: 'L' },
-  c455h:      { lunghezza: 5200, larghezza: 630, tipo: 'allineamento', serie: 'L' },
-  c455plus:   { lunghezza: 5200, larghezza: 630, tipo: 'allineamento', serie: 'L' },
-  c450xl:     { lunghezza: 5700, larghezza: 530, tipo: 'liscia',       serie: 'XL' },
-  c455xl:     { lunghezza: 5700, larghezza: 530, tipo: 'allineamento', serie: 'XL' },
-  c470:       { lunghezza: 6240, larghezza: 580, tipo: 'liscia',       serie: 'Industrial' },
-  c472:       { lunghezza: 6240, larghezza: 580, tipo: 'allineamento', serie: 'Industrial' },
-  c4100:      { lunghezza: 7000, larghezza: 700, tipo: 'liscia',       serie: 'Industrial' },
+  c440:       { lunghezza: 4335, larghezza: 500, larghezzaTotale: 2990, tipo: 'liscia',       serie: 'S' },
+  c442:       { lunghezza: 4335, larghezza: 500, larghezzaTotale: 2990, tipo: 'allineamento', serie: 'S' },
+  c443:       { lunghezza: 4800, larghezza: 630, larghezzaTotale: 3190, tipo: 'liscia',       serie: 'M' },
+  c443h:      { lunghezza: 4800, larghezza: 630, larghezzaTotale: 3190, tipo: 'liscia',       serie: 'M' },
+  c445:       { lunghezza: 4800, larghezza: 630, larghezzaTotale: 3190, tipo: 'allineamento', serie: 'M' },
+  c445h:      { lunghezza: 4800, larghezza: 630, larghezzaTotale: 3190, tipo: 'allineamento', serie: 'M' },
+  c450_toro:  { lunghezza: 4700, larghezza: 615, larghezzaTotale: 2610, tipo: 'liscia',       serie: 'L' },
+  c450h:      { lunghezza: 5200, larghezza: 630, larghezzaTotale: 3190, tipo: 'liscia',       serie: 'L' },
+  c450plus:   { lunghezza: 5200, larghezza: 630, larghezzaTotale: 3190, tipo: 'liscia',       serie: 'L' },
+  c455h:      { lunghezza: 5200, larghezza: 630, larghezzaTotale: 3190, tipo: 'allineamento', serie: 'L' },
+  c455plus:   { lunghezza: 5200, larghezza: 630, larghezzaTotale: 3190, tipo: 'allineamento', serie: 'L' },
+  c450xl:     { lunghezza: 5700, larghezza: 530, larghezzaTotale: 3410, tipo: 'liscia',       serie: 'XL' },
+  c455xl:     { lunghezza: 5700, larghezza: 530, larghezzaTotale: 3410, tipo: 'allineamento', serie: 'XL' },
+  c470:       { lunghezza: 6240, larghezza: 580, larghezzaTotale: 3000, tipo: 'liscia',       serie: 'Industrial' },
+  c472:       { lunghezza: 6240, larghezza: 580, larghezzaTotale: 3000, tipo: 'allineamento', serie: 'Industrial' },
+  c4100:      { lunghezza: 7000, larghezza: 700, larghezzaTotale: 3880, tipo: 'liscia',       serie: 'Industrial' },
 };
 
 // Cerca i 4 colonne che soddisfano le misure richieste (piattaforma con
@@ -301,9 +302,11 @@ function selectProducts4ColByMisure(products, lunghezzaMm, larghezzaMm, tipoPiat
     .filter(p => tipoPiattaforma === 'entrambe' || PIATTAFORME_4COL[p.id].tipo === tipoPiattaforma)
     .map(p => {
       const dim = PIATTAFORME_4COL[p.id];
-      const esatto = dim.lunghezza >= lunghezzaMm && dim.larghezza >= larghezzaMm;
+      // Le pedane devono essere lunghe ALMENO quanto richiesto;
+      // l'ingombro totale del ponte deve rientrare nella larghezza disponibile.
+      const esatto = dim.lunghezza >= lunghezzaMm && dim.larghezzaTotale <= larghezzaMm;
       // Distanza dalle misure richieste (per ordinare dal più adatto/vicino)
-      const delta = Math.abs(dim.lunghezza - lunghezzaMm) + Math.abs(dim.larghezza - larghezzaMm);
+      const delta = Math.abs(dim.lunghezza - lunghezzaMm) + Math.abs(dim.larghezzaTotale - larghezzaMm);
       return { ...p, _piattaforma: { ...dim, esatto, delta } };
     });
 
@@ -722,9 +725,9 @@ const generateDocumentText = ({ mode, customer, items, note, imponibile, scontoT
     if (is4Col && config.flow === 'misure4col') {
       const dim = PIATTAFORME_4COL[product.id];
       dettagliConfig = `Tipo sollevatore: 4 Colonne
-Selezione: In funzione delle misure piattaforma
-Misure richieste: ${config.lunghezzaMm} x ${config.larghezzaMm} mm
-Pedane modello: ${dim ? `${dim.lunghezza} x ${dim.larghezza} mm (Serie ${dim.serie}, ${dim.tipo === 'liscia' ? 'liscia' : 'allineamento'})` : '—'}
+Selezione: In funzione delle misure
+Misure richieste: pedane >= ${config.lunghezzaMm} mm, larghezza totale <= ${config.larghezzaMm} mm
+Modello: pedane ${dim ? `${dim.lunghezza} mm, larghezza totale ${dim.larghezzaTotale} mm (Serie ${dim.serie}, ${dim.tipo === 'liscia' ? 'liscia' : 'allineamento'})` : '—'}
 Pavimentazione: Universale (4 colonne)`;
     } else if (is4Col) {
       const impiegoLabel = IMPIEGO_TYPES_4COL.find(t => t.id === config.impiego)?.label || '—';
@@ -981,7 +984,8 @@ function ProductCard({ product, isRecommended, onSelect, mode, alreadyInCart, ti
         }`}>
           <span className="flex items-center gap-2">
             <Ruler size={12} className="flex-shrink-0" />
-            Pedane <strong>{product._piattaforma.lunghezza} x {product._piattaforma.larghezza} mm</strong>
+            Pedane <strong>{product._piattaforma.lunghezza} mm</strong>
+            · Largh. tot. <strong>{product._piattaforma.larghezzaTotale} mm</strong>
             · Serie {product._piattaforma.serie}
             · {product._piattaforma.tipo === 'liscia' ? 'Liscia' : 'Allineamento'}
           </span>
@@ -1329,7 +1333,7 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
   // l'app trova i 4 colonne che soddisfano le misure oppure, se non esistono,
   // propone i prodotti che si avvicinano maggiormente.
   const misureValide = Number(lunghezzaMm) >= 3000 && Number(lunghezzaMm) <= 8000 &&
-                       Number(larghezzaMm) >= 300 && Number(larghezzaMm) <= 1000;
+                       Number(larghezzaMm) >= 2000 && Number(larghezzaMm) <= 6000;
   const handleMisure4Col = () => {
     if (!misureValide) return;
     const { results, approssimati } = selectProducts4ColByMisure(
@@ -1549,9 +1553,10 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
             <Badge text="Catalogo 4 colonne Cascos" color="violet" />
           </div>
           <p className="text-sm text-slate-400 mb-5">
-            Imposta le misure minime richieste per le pedane e il tipo di piattaforma:
-            l'app trova i ponti 4 colonne che le soddisfano. Se nessun modello
-            corrisponde esattamente, ti verranno proposti i prodotti più vicini.
+            Imposta la lunghezza minima delle pedane, la larghezza totale disponibile
+            (ingombro complessivo del ponte) e il tipo di piattaforma: l'app trova i
+            4 colonne che soddisfano le misure. Se nessun modello corrisponde
+            esattamente, ti verranno proposti i prodotti più vicini.
           </p>
 
           <div className="glass rounded-xl p-4 space-y-4">
@@ -1566,10 +1571,10 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
                 />
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Larghezza pedana (mm)</label>
+                <label className="text-xs text-slate-400 mb-1 block">Larghezza totale disponibile (mm)</label>
                 <input
                   className="w-full glass rounded-lg py-2.5 px-3 text-sm text-white border border-slate-700 focus:outline-none focus:border-teal-500"
-                  type="number" min="300" max="1000" step="5" placeholder="es. 630"
+                  type="number" min="2000" max="6000" step="5" placeholder="es. 3190"
                   value={larghezzaMm}
                   onChange={e => setLarghezzaMm(e.target.value)}
                 />
@@ -1609,21 +1614,21 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
             </button>
             {!misureValide && (lunghezzaMm || larghezzaMm) && (
               <p className="text-xs text-slate-500 text-center">
-                Inserisci una lunghezza tra 3.000 e 8.000 mm e una larghezza tra 300 e 1.000 mm.
+                Inserisci una lunghezza pedane tra 3.000 e 8.000 mm e una larghezza totale tra 2.000 e 6.000 mm.
               </p>
             )}
           </div>
 
           {/* Riferimento rapido serie piattaforme dal catalogo */}
           <div className="glass rounded-xl p-4 mt-4">
-            <div className="text-xs font-semibold text-slate-300 mb-2">Serie piattaforme Cascos (L x W)</div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs text-slate-400">
-              <span>Serie S · 4.335 x 500</span>
-              <span>Serie M · 4.800 x 630</span>
-              <span>Serie L · 5.200 x 630</span>
-              <span>Serie XL · 5.700 x 530</span>
-              <span>Industrial · 6.240 x 580</span>
-              <span>Industrial · 7.000 x 700</span>
+            <div className="text-xs font-semibold text-slate-300 mb-2">Serie Cascos · pedane (mm) · larghezza totale (mm)</div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+              <span>Serie S · pedane 4.335 · largh. tot. 2.990</span>
+              <span>Serie M · pedane 4.800 · largh. tot. 3.190</span>
+              <span>Serie L · pedane 5.200 · largh. tot. 3.190</span>
+              <span>Serie XL · pedane 5.700 · largh. tot. 3.410</span>
+              <span>Industrial 7t · pedane 6.240 · largh. tot. 3.000</span>
+              <span>Industrial 12t · pedane 7.000 · largh. tot. 3.880</span>
             </div>
           </div>
         </div>
@@ -1868,7 +1873,7 @@ function ResultsView({ mode, config, cartItems, onAddToCart, onGoToQuote, onBack
           </div>
           <div className="text-white font-semibold">
             {isMisureFlow
-              ? <>📐 4 Colonne · Pedane ≥ {config.lunghezzaMm} x {config.larghezzaMm} mm · {tipoPiattLabel}</>
+              ? <>📐 4 Colonne · Pedane ≥ {config.lunghezzaMm} mm · Largh. tot. ≤ {config.larghezzaMm} mm · {tipoPiattLabel}</>
               : is4Col
                 ? <>{vehicleInfo?.icon} {vehicleInfo?.label} · {impiegoLabel} · 4 Colonne</>
                 : isBracciFlow
@@ -1929,7 +1934,7 @@ function ResultsView({ mode, config, cartItems, onAddToCart, onGoToQuote, onBack
               <AlertCircle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
               <div className="text-sm text-slate-300">
                 <span className="font-semibold text-amber-300">Nessun modello soddisfa esattamente le misure richieste
-                ({config.lunghezzaMm} x {config.larghezzaMm} mm).</span>{' '}
+                (pedane ≥ {config.lunghezzaMm} mm, larghezza totale ≤ {config.larghezzaMm} mm).</span>{' '}
                 Ti proponiamo i prodotti che si avvicinano maggiormente alle misure indicate.
               </div>
             </div>
@@ -2099,7 +2104,7 @@ function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onA
                         <div className="text-xs text-slate-400 print:text-gray-500">{product.portata} · {product.categoria}</div>
                         <div className="text-xs text-slate-500 print:text-gray-600">
                           {isMisureRow
-                            ? <>4 Colonne · Selezione per misure · Pedane {dimRow ? `${dimRow.lunghezza} x ${dimRow.larghezza} mm` : '—'}</>
+                            ? <>4 Colonne · Selezione per misure · Pedane {dimRow ? `${dimRow.lunghezza} mm · Largh. tot. ${dimRow.larghezzaTotale} mm` : '—'}</>
                             : is4ColRow
                               ? <>4 Colonne · {vehicleInfo?.label} · {impiegoLabelRow}</>
                               : isBracciRow
@@ -2289,13 +2294,13 @@ function QuoteView({ mode, items, onUpdateQty, onUpdateSconto, onRemoveItem, onA
                       ? <Badge text={`Braccio ${braccioRow?.label || ''}`} color="violet" />
                       : (bracciInfo && <Badge text={`${config.distanzaMm} mm`} color="violet" />)
                   }
-                  {isMisureRow && dimRow && <Badge text={`Pedane ${dimRow.lunghezza} x ${dimRow.larghezza} mm`} color="amber" />}
+                  {isMisureRow && dimRow && <Badge text={`Pedane ${dimRow.lunghezza} · Largh. ${dimRow.larghezzaTotale} mm`} color="amber" />}
                   {is4ColRow && !isMisureRow && impiegoLabelRow && <Badge text={impiegoLabelRow} color="amber" />}
                 </div>
 
                 <div className="text-xs text-slate-500">
                   {isMisureRow
-                    ? <>📐 Selezione in funzione delle misure ({config.lunghezzaMm} x {config.larghezzaMm} mm richiesti)</>
+                    ? <>📐 Selezione per misure (pedane ≥ {config.lunghezzaMm} mm, largh. tot. ≤ {config.larghezzaMm} mm)</>
                     : isBracciRow
                       ? <>📏 Selezione in funzione del veicolo</>
                       : <>{vehicleInfo?.icon} {vehicleInfo?.label}</>
