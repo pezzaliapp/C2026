@@ -275,22 +275,27 @@ function selectProductsByBraccio(products, braccioId, pavimentazione) {
 
 // larghezzaTotale = ingombro complessivo del ponte (quota dai disegni catalogo)
 const PIATTAFORME_4COL = {
-  c440:       { lunghezza: 4335, larghezza: 500, larghezzaTotale: 2990, tipo: 'liscia',       serie: 'S' },
-  c442:       { lunghezza: 4335, larghezza: 500, larghezzaTotale: 2990, tipo: 'allineamento', serie: 'S' },
-  c443:       { lunghezza: 4800, larghezza: 630, larghezzaTotale: 3190, tipo: 'liscia',       serie: 'M' },
-  c443h:      { lunghezza: 4800, larghezza: 630, larghezzaTotale: 3190, tipo: 'liscia',       serie: 'M' },
-  c445:       { lunghezza: 4800, larghezza: 630, larghezzaTotale: 3190, tipo: 'allineamento', serie: 'M' },
-  c445h:      { lunghezza: 4800, larghezza: 630, larghezzaTotale: 3190, tipo: 'allineamento', serie: 'M' },
-  c450_toro:  { lunghezza: 4700, larghezza: 615, larghezzaTotale: 2610, tipo: 'liscia',       serie: 'L' },
-  c450h:      { lunghezza: 5200, larghezza: 630, larghezzaTotale: 3190, tipo: 'liscia',       serie: 'L' },
-  c450plus:   { lunghezza: 5200, larghezza: 630, larghezzaTotale: 3190, tipo: 'liscia',       serie: 'L' },
-  c455h:      { lunghezza: 5200, larghezza: 630, larghezzaTotale: 3190, tipo: 'allineamento', serie: 'L' },
-  c455plus:   { lunghezza: 5200, larghezza: 630, larghezzaTotale: 3190, tipo: 'allineamento', serie: 'L' },
-  c450xl:     { lunghezza: 5700, larghezza: 530, larghezzaTotale: 3410, tipo: 'liscia',       serie: 'XL' },
-  c455xl:     { lunghezza: 5700, larghezza: 530, larghezzaTotale: 3410, tipo: 'allineamento', serie: 'XL' },
-  c470:       { lunghezza: 6240, larghezza: 580, larghezzaTotale: 3000, tipo: 'liscia',       serie: 'Industrial' },
-  c472:       { lunghezza: 6240, larghezza: 580, larghezzaTotale: 3000, tipo: 'allineamento', serie: 'Industrial' },
-  c4100:      { lunghezza: 7000, larghezza: 700, larghezzaTotale: 3880, tipo: 'liscia',       serie: 'Industrial' },
+  // lunghezza        = lunghezza pedane (mm)
+  // larghezzaTotale  = ingombro trasversale del ponte, esterno colonne (quota "3190" dei disegni)
+  // luceColonne      = passaggio libero tra le colonne (quota "2780" dei disegni)
+  // larghezzaPedana  = larghezza della singola pedana
+  // interasse        = distanza regolabile tra le due pedane
+  c440:       { lunghezza: 4335, larghezzaTotale: 2990, luceColonne: 2580, larghezzaPedana: 500, interasse: '767-1017', tipo: 'liscia',       serie: 'S' },
+  c442:       { lunghezza: 4335, larghezzaTotale: 2990, luceColonne: 2580, larghezzaPedana: 500, interasse: '767-1017', tipo: 'allineamento', serie: 'S' },
+  c443:       { lunghezza: 4800, larghezzaTotale: 3410, luceColonne: 3000, larghezzaPedana: 630, interasse: '740-990',  tipo: 'liscia',       serie: 'M NEW' },
+  c445:       { lunghezza: 4800, larghezzaTotale: 3410, luceColonne: 3000, larghezzaPedana: 630, interasse: '740-990',  tipo: 'allineamento', serie: 'M NEW' },
+  c443h:      { lunghezza: 4800, larghezzaTotale: 3190, luceColonne: 2780, larghezzaPedana: 630, interasse: '740-990',  tipo: 'liscia',       serie: 'M' },
+  c445h:      { lunghezza: 4800, larghezzaTotale: 3190, luceColonne: 2780, larghezzaPedana: 630, interasse: '740-990',  tipo: 'allineamento', serie: 'M' },
+  c450_toro:  { lunghezza: 4700, larghezzaTotale: 2610, luceColonne: 2200, larghezzaPedana: 615, interasse: '350-400',  tipo: 'liscia',       serie: 'Toro' },
+  c450h:      { lunghezza: 5200, larghezzaTotale: 3190, luceColonne: 2780, larghezzaPedana: 630, interasse: '740-990',  tipo: 'liscia',       serie: 'L' },
+  c450plus:   { lunghezza: 5200, larghezzaTotale: 3190, luceColonne: 2780, larghezzaPedana: 630, interasse: '715-965',  tipo: 'liscia',       serie: 'L' },
+  c455h:      { lunghezza: 5200, larghezzaTotale: 3190, luceColonne: 2780, larghezzaPedana: 630, interasse: '740-990',  tipo: 'allineamento', serie: 'L' },
+  c455plus:   { lunghezza: 5200, larghezzaTotale: 3190, luceColonne: 2780, larghezzaPedana: 630, interasse: '715-965',  tipo: 'allineamento', serie: 'L' },
+  c450xl:     { lunghezza: 5700, larghezzaTotale: 3410, luceColonne: 3000, larghezzaPedana: 530, interasse: '684-1184', tipo: 'liscia',       serie: 'XL' },
+  c455xl:     { lunghezza: 5700, larghezzaTotale: 3410, luceColonne: 3000, larghezzaPedana: 530, interasse: '684-1184', tipo: 'allineamento', serie: 'XL' },
+  c470:       { lunghezza: 6240, larghezzaTotale: 3525, luceColonne: 2965, larghezzaPedana: 580, interasse: '750-1200', tipo: 'liscia',       serie: 'Industrial' },
+  c472:       { lunghezza: 6240, larghezzaTotale: 3525, luceColonne: 2965, larghezzaPedana: 580, interasse: '750-1200', tipo: 'allineamento', serie: 'Industrial' },
+  c4100:      { lunghezza: 7000, larghezzaTotale: 3880, luceColonne: 3200, larghezzaPedana: 700, interasse: '750-1200', tipo: 'liscia',       serie: 'Industrial' },
 };
 
 // Cerca i 4 colonne che soddisfano le misure richieste (piattaforma con
@@ -727,7 +732,7 @@ const generateDocumentText = ({ mode, customer, items, note, imponibile, scontoT
       dettagliConfig = `Tipo sollevatore: 4 Colonne
 Selezione: In funzione delle misure
 Misure richieste: pedane >= ${config.lunghezzaMm} mm, larghezza totale <= ${config.larghezzaMm} mm
-Modello: pedane ${dim ? `${dim.lunghezza} mm, larghezza totale ${dim.larghezzaTotale} mm (Serie ${dim.serie}, ${dim.tipo === 'liscia' ? 'liscia' : 'allineamento'})` : '—'}
+Modello: pedane ${dim ? `${dim.lunghezza} x ${dim.larghezzaPedana} mm, larghezza totale ${dim.larghezzaTotale} mm, luce colonne ${dim.luceColonne} mm, interasse pedane ${dim.interasse} mm (Serie ${dim.serie}, ${dim.tipo === 'liscia' ? 'liscia' : 'allineamento'})` : '—'}
 Pavimentazione: Universale (4 colonne)`;
     } else if (is4Col) {
       const impiegoLabel = IMPIEGO_TYPES_4COL.find(t => t.id === config.impiego)?.label || '—';
@@ -984,8 +989,10 @@ function ProductCard({ product, isRecommended, onSelect, mode, alreadyInCart, ti
         }`}>
           <span className="flex items-center gap-2">
             <Ruler size={12} className="flex-shrink-0" />
-            Pedane <strong>{product._piattaforma.lunghezza} mm</strong>
-            · Largh. tot. <strong>{product._piattaforma.larghezzaTotale} mm</strong>
+            Pedane <strong>{product._piattaforma.lunghezza} x {product._piattaforma.larghezzaPedana} mm</strong>
+            · Largh. totale <strong>{product._piattaforma.larghezzaTotale} mm</strong>
+            · Luce colonne {product._piattaforma.luceColonne} mm
+            · Interasse pedane {product._piattaforma.interasse} mm
             · Serie {product._piattaforma.serie}
             · {product._piattaforma.tipo === 'liscia' ? 'Liscia' : 'Allineamento'}
           </span>
@@ -1569,6 +1576,7 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
                   value={lunghezzaMm}
                   onChange={e => setLunghezzaMm(e.target.value)}
                 />
+                <p className="text-[10px] text-slate-500 mt-1">Lunghezza minima richiesta</p>
               </div>
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Larghezza totale disponibile (mm)</label>
@@ -1578,6 +1586,7 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
                   value={larghezzaMm}
                   onChange={e => setLarghezzaMm(e.target.value)}
                 />
+                <p className="text-[10px] text-slate-500 mt-1">Ingombro trasversale del ponte (esterno colonne)</p>
               </div>
             </div>
 
@@ -1621,14 +1630,16 @@ function ConfiguratorView({ mode, products, onResult, onBack, initialFlow = null
 
           {/* Riferimento rapido serie piattaforme dal catalogo */}
           <div className="glass rounded-xl p-4 mt-4">
-            <div className="text-xs font-semibold text-slate-300 mb-2">Serie Cascos · pedane (mm) · larghezza totale (mm)</div>
+            <div className="text-xs font-semibold text-slate-300 mb-2">Serie Cascos · lungh. pedane · larghezza totale ponte</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
-              <span>Serie S · pedane 4.335 · largh. tot. 2.990</span>
-              <span>Serie M · pedane 4.800 · largh. tot. 3.190</span>
-              <span>Serie L · pedane 5.200 · largh. tot. 3.190</span>
-              <span>Serie XL · pedane 5.700 · largh. tot. 3.410</span>
-              <span>Industrial 7t · pedane 6.240 · largh. tot. 3.000</span>
-              <span>Industrial 12t · pedane 7.000 · largh. tot. 3.880</span>
+              <span>Serie S · 4.335 · <strong className="text-slate-300">2.990</strong></span>
+              <span>Toro · 4.700 · <strong className="text-slate-300">2.610</strong></span>
+              <span>Serie M · 4.800 · <strong className="text-slate-300">3.190</strong></span>
+              <span>Serie M NEW · 4.800 · <strong className="text-slate-300">3.410</strong></span>
+              <span>Serie L · 5.200 · <strong className="text-slate-300">3.190</strong></span>
+              <span>Serie XL · 5.700 · <strong className="text-slate-300">3.410</strong></span>
+              <span>Industrial 7t · 6.240 · <strong className="text-slate-300">3.525</strong></span>
+              <span>Industrial 12t · 7.000 · <strong className="text-slate-300">3.880</strong></span>
             </div>
           </div>
         </div>
