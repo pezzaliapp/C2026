@@ -25,6 +25,11 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Il nuovo service worker prende il controllo subito e ripulisce
+        // le cache delle versioni precedenti: aggiornamento senza reinstallare.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
         // PDF esclusi dal precache: troppo grandi (44MB totale), verranno scaricati on-demand
         globIgnores: ['**/*.pdf'],
